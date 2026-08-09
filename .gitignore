@@ -1,0 +1,9 @@
+/.bundle/
+/.cache/
+/.direnv/
+/.nix-*
+/.serena/cache/
+*.fasl
+*.dx64fsl
+*.lx64fsl
+*.image
