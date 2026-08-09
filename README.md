@@ -76,6 +76,27 @@ Without the optional system, a configured retry policy remains inert for
 ordinary commands, while `:retry-safe-p t` signals a client error instead of
 silently executing outside the requested policy.
 
+### ASDF systems
+
+The repository defines four ASDF systems:
+
+- `cl-redis-kit` is the production client.
+- `cl-redis-kit/test` contains the standard protocol, transport, lifecycle,
+  command, pool, metrics, and property/fuzz tests. It is the system loaded by
+  `run-tests.lisp` and by the main system's `test-op`.
+- `cl-redis-kit/resilience` provides the optional direct integration with
+  `cl-resilience-kit`.
+- `cl-redis-kit/resilience/test` tests that optional integration separately,
+  so installations without `cl-resilience-kit` can still use and test the
+  main client.
+
+Load the resilience test system only in an environment that provides
+`cl-resilience-kit`:
+
+```lisp
+(asdf:test-system "cl-redis-kit/resilience/test")
+```
+
 ## Development
 
 With Nix installed, enter the reproducible development environment:
