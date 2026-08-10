@@ -38,6 +38,12 @@
                   payload
                   (test-octets 13 10)))))
 
+(defun selected-test-count ()
+  (let* ((plan (cl-weave:collect-test-plan (cl-weave:root-suite)))
+         (facts (cl-weave:test-plan-facts plan)))
+    (length (cl-weave:test-plan-where facts
+                                      (:status ?test :run)))))
+
 (defun run-tests (&key (reporter :spec)
                        coverage
                        coverage-output
@@ -46,18 +52,22 @@
                        coverage-exclude-pathnames
                        coverage-minimum-expression
                        coverage-minimum-branch)
-  (unless (cl-weave:run-all
-            :reporter reporter
-            :timeout-ms 20000
-            :max-workers 1
-            :pass-with-no-tests nil
-            :coverage coverage
-            :coverage-output coverage-output
-            :coverage-report-directory coverage-report-directory
-            :coverage-include-pathnames coverage-include-pathnames
-            :coverage-exclude-pathnames coverage-exclude-pathnames
-            :coverage-minimum-expression coverage-minimum-expression
-            :coverage-minimum-branch coverage-minimum-branch)
-    (error "cl-redis-kit test suite failed"))
-  (format t "~&cl-redis-kit/test: successful completion with 0 failures~%")
+  (let ((selected-tests (selected-test-count)))
+    (unless (plusp selected-tests)
+      (error "cl-redis-kit test suite selected no tests."))
+    (format t "~&cl-redis-kit/test: selected ~D tests~%" selected-tests)
+    (unless (cl-weave:run-all
+              :reporter reporter
+              :timeout-ms 20000
+              :max-workers 1
+              :pass-with-no-tests nil
+              :coverage coverage
+              :coverage-output coverage-output
+              :coverage-report-directory coverage-report-directory
+              :coverage-include-pathnames coverage-include-pathnames
+              :coverage-exclude-pathnames coverage-exclude-pathnames
+              :coverage-minimum-expression coverage-minimum-expression
+              :coverage-minimum-branch coverage-minimum-branch)
+      (error "cl-redis-kit test suite failed"))
+    (format t "~&cl-redis-kit/test: ~D selected tests passed~%" selected-tests))
   t)

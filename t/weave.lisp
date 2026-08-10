@@ -1,3 +1,4 @@
+; paredit:ignore-file leftover-inspect-call -- CL-WEAVE's DESCRIBE is the BDD test DSL, not a debugger inspection call.
 (in-package #:redis-kit/test)
 
 (describe "cl-weave execution journals"

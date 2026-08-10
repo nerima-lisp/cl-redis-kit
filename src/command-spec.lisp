@@ -10,7 +10,7 @@ COMMAND is the Redis command name, LAMBDA-LIST describes the public
 arguments after the connection, and ARGUMENTS is a form producing the list
 sent to Redis.  The generated function delegates to the same execution,
 timeout, retry, and decoding path as EXECUTE, so command declarations do not
-create a second protocol adapter.
+create a second wire or protocol path.
 
 RETRY-SAFE-P is deliberately part of the specification.  A command may use
 the connection retry policy only when its caller has established that replay

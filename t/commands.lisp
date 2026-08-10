@@ -79,6 +79,10 @@
                                      :get t
                                      :keepttl t)
                      :to-equal "OK")
+             (expect (redis-kit:set connection "key" "value" :exat 100)
+                     :to-equal "OK")
+             (expect (redis-kit:set connection "key" "value" :pxat 100)
+                     :to-equal "OK")
              (expect (redis-kit:del connection "key") :to-be 1)
              (expect (redis-kit:exists connection "key") :to-be 1)
              (expect (redis-kit:incr connection "counter") :to-be 1)
@@ -86,6 +90,8 @@
              (expect (redis-kit:decr connection "counter") :to-be 1)
              (expect (redis-kit:decr connection "counter" 2) :to-be 1)
              (expect (redis-kit:expire connection "key" 10 :nx t)
+                     :to-be 1)
+             (expect (redis-kit:expire connection "key" 10 :gt t)
                      :to-be 1)
              (expect (redis-kit:pexpire connection "key" 10 :lt t)
                      :to-be 1)
@@ -118,8 +124,8 @@
              (expect (mapcar (function first) (nreverse seen))
                      :to-equal
                      '("AUTH" "AUTH" "SELECT" "HELLO" "PING" "GET" "SET" "SET"
-                       "DEL" "EXISTS" "INCR" "INCRBY" "DECR" "DECRBY"
-                       "EXPIRE" "PEXPIRE"
+                       "SET" "SET" "DEL" "EXISTS" "INCR" "INCRBY"
+                       "DECR" "DECRBY" "EXPIRE" "EXPIRE" "PEXPIRE"
                        "TTL" "PTTL" "HGET" "HSET" "HDEL" "LPUSH" "RPUSH"
                        "LRANGE" "SADD" "SMEMBERS" "ZADD" "ZRANGE" "PUBLISH"
                        "FLUSHDB" "EVAL" "QUIT")))

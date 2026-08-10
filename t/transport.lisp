@@ -263,19 +263,18 @@
       (setf (redis-kit::%connection-stream connection)
             (make-string-output-stream))
       (unwind-protect
-           (progn
-             (with-mocked-functions
-                 (((symbol-function 'redis-kit:read-reply)
-                    (lambda (&rest arguments)
-                      (declare (ignore arguments))
-                      (pop replies))))
-               (expect
-                (redis-kit::%socket-boundary-request
-                 connection
-                 (list :bytes (test-octets) :replies 2)
-                 nil)
-                :to-equal
-                (list first-reply second-reply))))
+           (with-mocked-functions
+               (((symbol-function 'redis-kit:read-reply)
+                  (lambda (&rest arguments)
+                    (declare (ignore arguments))
+                    (pop replies))))
+             (expect
+              (redis-kit::%socket-boundary-request
+               connection
+               (list :bytes (test-octets) :replies 2)
+               nil)
+              :to-equal
+              (list first-reply second-reply)))
         (redis-kit:close-connection connection)))
     (let* ((handled nil)
            (connection

@@ -62,4 +62,4 @@
             (declare (ignore reply))
             (expect (<= 0 next (length octets)) :to-be t))
         (redis-kit:redis-protocol-error ()
-          (expect t :to-be t))))))
+          (values))))))
