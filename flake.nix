@@ -92,34 +92,34 @@
         let
           host = ctx.cl.lispDerivation {
             lispSystem = "cl-host-kit";
-            version = ctx.fromAsdSystem (cl-host-kit + "/cl-host-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-host-kit + "/cl-host-kit.asd");
             src = cl-host-kit;
           };
           codec = ctx.cl.lispDerivation {
             lispSystem = "cl-codec-kit";
-            version = ctx.fromAsdSystem (cl-codec-kit + "/cl-codec-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-codec-kit + "/cl-codec-kit.asd");
             src = cl-codec-kit;
           };
           date = ctx.cl.lispDerivation {
             lispSystem = "cl-date-kit";
-            version = ctx.fromAsdSystem (cl-date-kit + "/cl-date-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-date-kit + "/cl-date-kit.asd");
             src = cl-date-kit;
           };
           boundary = ctx.cl.lispDerivation {
             lispSystem = "cl-boundary-kit";
-            version = ctx.fromAsdSystem (cl-boundary-kit + "/cl-boundary-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-boundary-kit + "/cl-boundary-kit.asd");
             src = cl-boundary-kit;
             lispDependencies = [ host ];
           };
           concurrent = ctx.cl.lispDerivation {
             lispSystem = "cl-concurrent-kit";
-            version = ctx.fromAsdSystem (cl-concurrent-kit + "/cl-concurrent-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-concurrent-kit + "/cl-concurrent-kit.asd");
             src = cl-concurrent-kit;
             lispDependencies = [ boundary date ];
           };
           observability = ctx.cl.lispDerivation {
             lispSystem = "cl-observability-kit";
-            version = ctx.fromAsdSystem (cl-observability-kit + "/cl-observability-kit.asd");
+            version = ctx.cl.fromAsdSystem (cl-observability-kit + "/cl-observability-kit.asd");
             src = cl-observability-kit;
             lispDependencies = [ concurrent ];
           };
@@ -129,10 +129,6 @@
           };
           usocket = ctx.cl.fromNixpkgsLisp {
             drv = ctx.pkgs.sbclPackages.usocket;
-            lispImplementation = "sbcl";
-          };
-          ssl = ctx.cl.fromNixpkgsLisp {
-            drv = ctx.pkgs.sbclPackages.cl_plus_ssl;
             lispImplementation = "sbcl";
           };
           alexandria = ctx.cl.fromNixpkgsLisp {
@@ -181,7 +177,6 @@
           observability
           splitSequence
           usocket
-          ssl
           alexandria
           babel
           bordeauxThreads
@@ -196,7 +191,7 @@
       lispCheckDependencies = ctx: [
         (ctx.cl.lispDerivation {
           lispSystem = "cl-weave";
-          version = ctx.fromAsdSystem (cl-weave + "/cl-weave.asd");
+          version = ctx.cl.fromAsdSystem (cl-weave + "/cl-weave.asd");
           src = cl-weave;
         })
       ];
@@ -208,16 +203,40 @@
         paredit-cli.packages.${ctx.system}.default
       ];
 
-      extraOutputs = ctx: {
-        packages.coverage = ctx.cl.mkCoverageReport {
-          drv = ctx.package.enableCheck;
-          systems = [ "cl-redis-kit" ];
-          timeoutSeconds = testTimeout;
+      extraOutputs = ctx:
+        let
+          clPlusSsl = ctx.cl.fromNixpkgsLisp {
+            drv = ctx.pkgs.sbclPackages.cl_plus_ssl;
+            lispImplementation = "sbcl";
+          };
+          tlsPackage =
+            (ctx.cl.lispMultiDerivation (
+              ctx.lispDerivationArgs
+              // {
+                lispCheckDependencies = [ ];
+                systems = {
+                  tls = {
+                    lispSystem = "cl-redis-kit/tls";
+                    lispDependencies =
+                      ctx.lispDerivationArgs.lispDependencies
+                      ++ [ ctx.package clPlusSsl ];
+                  };
+                };
+              }
+            )).tls;
+        in
+        {
+          packages.coverage = ctx.cl.mkCoverageReport {
+            drv = ctx.package.enableCheck;
+            systems = [ "cl-redis-kit" ];
+            timeoutSeconds = testTimeout;
+          };
+          packages.tls = tlsPackage;
+          checks.paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
+            inherit (ctx) src;
+            name = "cl-redis-kit-paredit-lint";
+          };
+          checks.tls = tlsPackage;
         };
-        checks.paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
-          inherit (ctx) src;
-          name = "cl-redis-kit-paredit-lint";
-        };
-      };
     };
 }

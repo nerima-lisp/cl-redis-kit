@@ -13,7 +13,6 @@
                "cl-concurrent-kit"
                "cl-date-kit"
                "cl-observability-kit"
-               "cl+ssl"
                "usocket")
   :pathname "src"
   :serial t
@@ -40,6 +39,14 @@
                (:file "commands-collections")
                (:file "pool"))
   :in-order-to ((test-op (test-op "cl-redis-kit/test"))))
+
+(defsystem "cl-redis-kit/tls"
+  :description "Optional cl+ssl transport integration for cl-redis-kit."
+  :license "MIT"
+  :version "2.0.0"
+  :depends-on ("cl-redis-kit" "cl+ssl")
+  :pathname "src"
+  :components ((:file "tls-cl+ssl")))
 
 (defsystem "cl-redis-kit/resilience"
   :description "Optional cl-resilience-kit integration for cl-redis-kit."

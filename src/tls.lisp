@@ -20,16 +20,12 @@
                       :cause key))))
   options)
 
-(defun %upgrade-tls-stream (stream host options)
-  "Upgrade STREAM with CL+SSL using the connection's TLS OPTIONS.
+(defgeneric %upgrade-tls-stream (stream host options)
+  (:documentation
+   "Upgrade STREAM for HOST using OPTIONS when optional TLS support is loaded."))
 
-CL+SSL is a direct system dependency so the TLS boundary can use its public
-API without a runtime package adapter."
-  (cl+ssl:make-ssl-client-stream
-   stream
-   :hostname host
-   :verify (getf options :verify :required)
-   :certificate (getf options :certificate)
-   :key (getf options :key)
-   :password (getf options :password)
-   :external-format nil))
+(defmethod %upgrade-tls-stream ((stream t) host options)
+  (declare (ignore stream host options))
+  (error 'redis-client-error
+         :message "TLS support is not loaded. Load the cl-redis-kit/tls system."
+         :cause :tls-unavailable))

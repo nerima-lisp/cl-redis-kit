@@ -139,30 +139,15 @@
 
 (describe
     "TLS boundary"
-  (it "passes TLS options directly to CL+SSL"
-    (let (received)
-      (with-mocked-functions
-          (((symbol-function 'cl+ssl:make-ssl-client-stream)
-             (lambda (stream &rest options)
-               (setf received (list stream options))
-               :secure)))
-        (expect (redis-kit::%upgrade-tls-stream
-                 :plain
-                 "redis.example"
-                 '(:verify :optional
-                   :certificate cert
-                   :key key
-                   :password pass))
-                :to-be
-                :secure))
-      (expect received
-              :to-equal
-              '(:plain (:hostname "redis.example"
-                        :verify :optional
-                        :certificate cert
-                        :key key
-                        :password pass
-                        :external-format nil)))))
+  (it "reports TLS support as an optional boundary"
+    (signals redis-kit:redis-client-error
+      (redis-kit::%upgrade-tls-stream
+       :plain
+       "redis.example"
+       '(:verify :optional
+         :certificate cert
+         :key key
+         :password pass))))
 
   (it "rejects malformed and unknown TLS options"
     (let ((options '(:verify t)))
