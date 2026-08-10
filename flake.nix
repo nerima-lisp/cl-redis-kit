@@ -15,7 +15,7 @@
     };
 
     paredit-cli = {
-      url = "github:takeokunn/paredit-cli/v1.5.0";
+      url = "github:takeokunn/paredit-cli/v1.6.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -47,7 +47,7 @@
     # No release tag is published yet; pin the reviewed upstream commit so
     # dependency resolution remains reproducible.
     cl-observability-kit = {
-      url = "github:nerima-lisp/cl-observability-kit/3af5d47d7bc1178f2bf47027c91acbd8f9468351";
+      url = "github:nerima-lisp/cl-observability-kit/eeb054321c787535133594f1b1800aeae48cb2f6";
       flake = false;
     };
 
