@@ -37,6 +37,7 @@
                (:file "commands-connection")
                (:file "commands-key-value")
                (:file "commands-collections")
+               (:file "pool-model")
                (:file "pool"))
   :in-order-to ((test-op (test-op "cl-redis-kit/test"))))
 

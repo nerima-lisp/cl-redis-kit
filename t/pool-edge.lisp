@@ -68,6 +68,44 @@
              (redis-kit:call-with-pool-connection pool nil))
         (redis-kit:close-pool pool))))
 
+  (it "inherits omitted connection timeouts from the pool timeout"
+    (let ((pool (redis-kit:make-pool
+                 :protocol :resp2
+                 :handshake nil
+                 :network-boundary (make-test-boundary)
+                 :timeout 3)))
+      (unwind-protect
+           (let (connect-timeout read-timeout)
+             (redis-kit:call-with-pool-connection
+              pool
+              (lambda (connection)
+                (setf connect-timeout
+                      (redis-kit::%connection-connect-timeout connection)
+                      read-timeout
+                      (redis-kit::%connection-read-timeout connection))))
+             (expect connect-timeout :to-be 3)
+             (expect read-timeout :to-be 3))
+        (redis-kit:close-pool pool)))
+    (let ((pool (redis-kit:make-pool
+                 :protocol :resp2
+                 :handshake nil
+                 :network-boundary (make-test-boundary)
+                 :timeout 3
+                 :connect-timeout nil
+                 :read-timeout nil)))
+      (unwind-protect
+           (let (connect-timeout read-timeout)
+             (redis-kit:call-with-pool-connection
+              pool
+              (lambda (connection)
+                (setf connect-timeout
+                      (redis-kit::%connection-connect-timeout connection)
+                      read-timeout
+                      (redis-kit::%connection-read-timeout connection))))
+             (expect connect-timeout :to-be nil)
+             (expect read-timeout :to-be nil))
+        (redis-kit:close-pool pool))))
+
   (it "discards a closed idle connection before replacing it"
     (let ((pool (redis-kit:make-pool
                  :protocol :resp2
@@ -111,6 +149,32 @@
                  (signals redis-kit:redis-timeout-error
                    (redis-kit::%pool-acquire pool 1))))
                (redis-kit::%pool-release pool borrowed)))
+        (redis-kit:close-pool pool))))
+
+  (it "returns an idle connection after a condition wakeup"
+    (let ((pool (redis-kit:make-pool
+                 :protocol :resp2
+                 :handshake nil
+                 :network-boundary (make-test-boundary)
+                 :max-size 1)))
+      (unwind-protect
+           (let ((borrowed (redis-kit::%pool-acquire pool nil))
+                 (acquired nil)
+                 (wait-calls 0))
+             (unwind-protect
+                  (with-mocked-functions
+                      (((symbol-function 'cl-concurrent-kit:condition-wait)
+                        (lambda (&rest arguments)
+                          (declare (ignore arguments))
+                          (incf wait-calls)
+                          (push borrowed (redis-kit::%pool-idle pool))
+                          t)))
+                    (setf acquired (redis-kit::%pool-acquire pool 1)))
+               (if acquired
+                   (redis-kit::%pool-release pool acquired)
+                   (redis-kit::%pool-release pool borrowed)))
+             (expect acquired :to-be borrowed)
+             (expect wait-calls :to-be 1))
         (redis-kit:close-pool pool))))
 
   (it "closes a borrowed connection after the pool closes"
