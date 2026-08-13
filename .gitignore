@@ -7,3 +7,5 @@
 *.dx64fsl
 *.lx64fsl
 *.image
+/result*
+/docs/site/
