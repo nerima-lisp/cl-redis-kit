@@ -20,6 +20,14 @@ documentation checks exposed by the flake. `nix run .#test` runs the core test
 application. The coverage, optional integration packages, and documentation
 site are separate outputs.
 
+## Coverage policy
+
+`nix build .#coverage` runs the non-empty core test plan and reports expression
+and branch coverage. The coverage gate also instruments declaration and
+compiler-generated forms; inspect uncovered executable paths before changing
+the test plan or coverage configuration. Do not hide gaps with file-wide
+exclusions or disabled instrumentation.
+
 ## Direct test execution
 
 Inside the development shell, the test runner can be invoked directly:
@@ -32,6 +40,19 @@ sbcl --non-interactive \
 The test plan uses the project's test packages and includes the optional
 resilience integration when its dependencies are available. Keep the selected
 test set non-empty when changing the runner or plan.
+
+## Optional resilience integration
+
+The `cl-redis-kit/resilience` system adds the `cl-resilience-kit` integration
+without making it a dependency of the core system. Build the dedicated
+integration output with:
+
+~~~sh
+nix build .#resilience
+~~~
+
+Use the resilience output when changing retry-policy integration or its
+optional dependencies.
 
 ## Documentation build
 
