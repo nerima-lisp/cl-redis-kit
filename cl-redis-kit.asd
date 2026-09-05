@@ -98,7 +98,6 @@
                (:file "execution")
                (:file "command-spec")
                (:file "properties")
-               (:file "weave")
                (:file "metrics")
                (:file "commands")
                (:file "pool")

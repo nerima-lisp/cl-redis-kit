@@ -53,13 +53,25 @@
                         :min-length 1
                         :max-length 32)))
       (:trials 64 :timeout-per-trial 5)
+    (let ((octets (make-array 5
+                              :element-type '(unsigned-byte 8)
+                              :initial-contents '(43 79 75 13 10))))
+      (multiple-value-bind (reply next)
+          (redis-kit:decode-reply octets)
+        (expect (redis-kit:redis-reply-type reply) :to-be :simple-string)
+        (expect (redis-kit:reply-value reply) :to-equal "OK")
+        (expect next :to-be 5)))
     (let ((octets (make-array (length bytes)
                               :element-type '(unsigned-byte 8)
                               :initial-contents bytes)))
       (handler-case
           (multiple-value-bind (reply next)
               (redis-kit:decode-reply octets)
-            (declare (ignore reply))
+            (expect (member (redis-kit:redis-reply-type reply)
+                            '(:simple-string :error :integer :bulk-string
+                              :bulk-error :array :null :double :big-number
+                              :verbatim-string :boolean :map :set :push))
+                    :to-be-truthy)
             (expect (<= 0 next (length octets)) :to-be t))
         (redis-kit:redis-protocol-error ()
           (values))))))

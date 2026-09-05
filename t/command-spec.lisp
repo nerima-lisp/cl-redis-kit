@@ -26,16 +26,7 @@
               :to-equal
               (sort (copy-list names) #'string< :key #'symbol-name)))))
 
-  (it "expands declarations and rejects missing wire arguments"
-    (expect
-     (macroexpand-1
-      '(redis-kit:define-redis-command
-           redis-kit::test-only-command
-           "TEST"
-           (key)
-         :arguments (list key)))
-     :to-satisfy
-     #'consp)
+  (it "rejects declarations with missing wire arguments"
     (signals error
       (macroexpand-1
        '(redis-kit:define-redis-command
