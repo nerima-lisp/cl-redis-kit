@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (defun %decimal-digit-value (character)
   (and (char>= character #\0)
        (char<= character #\9)

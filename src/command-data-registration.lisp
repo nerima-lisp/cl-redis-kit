@@ -1,0 +1,5 @@
+(defun register-redis-command-specification (specification)
+  (check-type specification redis-command-spec)
+  (setf (gethash (redis-command-spec-name specification)
+                 *redis-command-specifications*)
+        specification))

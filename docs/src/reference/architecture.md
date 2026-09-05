@@ -9,7 +9,9 @@ command arguments
   command specs  --->  command helpers
        |                     |
        v                     v
-  RESP encoder  --->  connection execution
+  RESP encoder  --->  execution policy
+                              |
+  pipelines --------------> connection scope
                               |
                               v
                        network boundary
@@ -27,7 +29,9 @@ command arguments
 | --- | --- |
 | Protocol model/API | RESP values, limits, encoding, decoding, and frame errors |
 | Connection model/lifecycle | Configuration, handshake, authentication, database selection, and close semantics |
-| Connection transport/execution | Network I/O, deadlines, retries, pipelines, and push replies |
+| Connection transport | Network I/O, deadlines, socket failures, and reply boundaries |
+| Execution journal | Opt-in `cl-weave` command, result, and error frames without payloads |
+| Execution policy/pipeline/scope | Retry dispatch, pipelines, resource ownership, and push replies |
 | Command specs/helpers | Declarative command metadata and generated convenience functions |
 | Pool | Lazy bounded borrowing and return of connections |
 | Metrics | Aggregate command counters, errors, and duration |
@@ -35,9 +39,14 @@ command arguments
 
 ## Dependency boundaries
 
-The core ASDF system owns protocol, connection, commands, pools, and metrics. Its
-declared dependencies include the boundary, codec, concurrency, date, and
-observability libraries plus `usocket`.
+The core ASDF system owns protocol, connection, commands, pools, metrics, and the
+execution journal. Its declared dependencies include the boundary, codec,
+concurrency, date, observability, and `cl-weave` libraries plus `usocket`.
+
+`cl-weave` is used directly at the actual command-attempt boundaries. Applications
+opt in with `cl-weave:with-execution-journal`; recorded frames contain the command
+name, argument count, reply shape, or error type, but never command payloads. With
+no active journal, the instrumentation is a no-op.
 
 `"cl-redis-kit/tls"` adds the `cl+ssl` transport. The core system provides
 the TLS option boundary, while the optional system supplies the concrete client

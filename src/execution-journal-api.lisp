@@ -1,0 +1,15 @@
+(defmacro %with-command-journal ((command argument-count) &body body)
+  (let ((command-var (gensym "COMMAND-"))
+        (argument-count-var (gensym "ARGUMENT-COUNT-")))
+    `(let ((,command-var ,command)
+           (,argument-count-var ,argument-count))
+       (%journal-command-start ,command-var ,argument-count-var)
+       (handler-case
+           (multiple-value-call
+               (lambda (&rest values)
+                 (%journal-command-result ,command-var (first values))
+                 (values-list values))
+             (progn ,@body))
+         (error (condition)
+           (%journal-command-error ,command-var condition)
+           (error condition))))))

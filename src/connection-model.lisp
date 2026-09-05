@@ -1,73 +1,4 @@
 ; paredit:ignore-file length-emptiness-test -- HOST is a string; LENGTH is the portable emptiness check and CONSP is not equivalent.
-(in-package #:redis-kit)
-
-(defclass redis-connection ()
-  ((host
-    :initarg :host
-    :reader connection-host)
-   (port
-    :initarg :port
-    :reader connection-port)
-   (protocol
-    :initarg :protocol
-    :accessor connection-protocol)
-   (timeout
-    :initarg :timeout
-    :reader connection-timeout)
-   (connect-timeout
-    :initarg :connect-timeout
-    :reader %connection-connect-timeout)
-   (read-timeout
-    :initarg :read-timeout
-    :reader %connection-read-timeout)
-   (username
-    :initarg :username
-    :reader %connection-username)
-   (password
-    :initarg :password
-    :reader %connection-password)
-   (database
-    :initarg :database
-    :reader %connection-database)
-   (handshake-p
-    :initarg :handshake
-    :reader %connection-handshake-p)
-   (tls
-     :initarg :tls
-     :reader connection-tls)
-   (retry-policy
-     :initarg :retry-policy
-     :reader connection-retry-policy)
-   (push-handler
-    :initarg :push-handler
-    :reader %connection-push-handler)
-   (max-pushes
-    :initarg :max-pushes
-    :reader %connection-max-pushes)
-   (socket
-    :initform nil
-    :accessor %connection-socket)
-   (stream
-    :initform nil
-    :accessor %connection-stream)
-   (state
-    :initform :new
-    :accessor connection-state)
-   (lock
-    :initarg :lock
-    :reader %connection-lock)
-   (network-boundary
-    :accessor connection-network-boundary)
-   (custom-boundary-p
-     :initarg :custom-boundary-p
-     :reader %connection-custom-boundary-p)
-   (metrics
-     :initarg :metrics
-     :reader %connection-metrics)
-   (pushes
-    :initform nil
-    :accessor %connection-pushes)))
-
 (defun redis-connection-p (object)
   (typep object 'redis-connection))
 
@@ -95,28 +26,32 @@
            :cause database))
   database)
 
-(defun make-connection (&key
-                               (host "127.0.0.1")
-                               (port 6379)
-                               (protocol :resp3)
-                               (timeout 5)
-                               (connect-timeout nil connect-timeout-supplied-p)
-                               (read-timeout nil read-timeout-supplied-p)
-                               username
-                               password
-                               database
-                               (handshake t)
-                                network-boundary
-                                tls
-                                retry-policy
-                                metric-registry
-                                push-handler
-                               (max-pushes 1024))
+(defun make-connection (&rest arguments
+                        &key host port protocol timeout
+                          connect-timeout read-timeout username password
+                          database handshake network-boundary tls retry-policy
+                          metric-registry push-handler max-pushes)
   "Create a Redis connection.
 
 The network boundary is always represented by CL-BOUNDARY-KIT.  Without a
-caller-supplied boundary its request function is backed by a usocket stream;
-tests and applications can inject a boundary without opening a socket."
+  caller-supplied boundary its request function is backed by a usocket stream;
+  tests and applications can inject a boundary without opening a socket."
+  (unless (%keyword-supplied-p arguments :host)
+    (setf host "127.0.0.1"))
+  (unless (%keyword-supplied-p arguments :port)
+    (setf port 6379))
+  (unless (%keyword-supplied-p arguments :protocol)
+    (setf protocol :resp3))
+  (unless (%keyword-supplied-p arguments :timeout)
+    (setf timeout 5))
+  (unless (%keyword-supplied-p arguments :connect-timeout)
+    (setf connect-timeout timeout))
+  (unless (%keyword-supplied-p arguments :read-timeout)
+    (setf read-timeout timeout))
+  (unless (%keyword-supplied-p arguments :handshake)
+    (setf handshake t))
+  (unless (%keyword-supplied-p arguments :max-pushes)
+    (setf max-pushes 1024))
   (unless (and (stringp host) (plusp (length host)))
     (error 'redis-client-error :message "HOST must be a non-empty string."
            :cause host))
@@ -125,10 +60,6 @@ tests and applications can inject a boundary without opening a socket."
            :cause port))
   (%validate-protocol protocol)
   (%validate-non-negative-number timeout "TIMEOUT")
-  (unless connect-timeout-supplied-p
-    (setf connect-timeout timeout))
-  (unless read-timeout-supplied-p
-    (setf read-timeout timeout))
   (%validate-non-negative-number connect-timeout "CONNECT-TIMEOUT")
   (%validate-non-negative-number read-timeout "READ-TIMEOUT")
   (%validate-database database)
@@ -147,9 +78,9 @@ tests and applications can inject a boundary without opening a socket."
                           :read-timeout read-timeout
                           :username username
                           :password password
-                           :database database
-                           :handshake handshake
-                           :tls tls
+                          :database database
+                          :handshake handshake
+                          :tls tls
                            :retry-policy retry-policy
                            :metrics (and metric-registry
                                          (make-redis-metrics

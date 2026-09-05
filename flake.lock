@@ -110,17 +110,34 @@
     "cl-observability-kit": {
       "flake": false,
       "locked": {
-        "lastModified": 1786239021,
-        "narHash": "sha256-o4V+ZhmYvkDKWXASoeZsNz/InqkPnqEgdWxqgJstyQ0=",
+        "lastModified": 1786360527,
+        "narHash": "sha256-e76lQVaHA5fBoK7wtUMuZs0ogCijrYvEQaORaxRUeao=",
         "owner": "nerima-lisp",
         "repo": "cl-observability-kit",
-        "rev": "eeb054321c787535133594f1b1800aeae48cb2f6",
+        "rev": "1a49cfc400abb1af7ea381cb57cce5aad3f73d6c",
         "type": "github"
       },
       "original": {
         "owner": "nerima-lisp",
+        "ref": "v0.1.0",
         "repo": "cl-observability-kit",
-        "rev": "eeb054321c787535133594f1b1800aeae48cb2f6",
+        "type": "github"
+      }
+    },
+    "cl-resilience-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786763915,
+        "narHash": "sha256-zKSL3mIsa783J8E2AD4tZUrQWaFuyMBjzLeE4wYYjVM=",
+        "owner": "nerima-lisp",
+        "repo": "cl-resilience-kit",
+        "rev": "741d42399ad781244bd36750c6626bd9f4e8b16b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "ref": "v1.0.0",
+        "repo": "cl-resilience-kit",
         "type": "github"
       }
     },
@@ -205,6 +222,7 @@
         "cl-host-kit": "cl-host-kit",
         "cl-nix-forge": "cl-nix-forge",
         "cl-observability-kit": "cl-observability-kit",
+        "cl-resilience-kit": "cl-resilience-kit",
         "cl-weave": "cl-weave",
         "nixpkgs": "nixpkgs",
         "paredit-cli": "paredit-cli",

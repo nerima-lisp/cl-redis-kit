@@ -1,14 +1,9 @@
-(in-package #:redis-kit)
-
-(defun %octet-vector-p (object)
+(defun %encodable-octet-vector-p (object)
   (and (vectorp object)
-       (multiple-value-bind (yes known)
-           (subtypep (array-element-type object) '(unsigned-byte 8))
-         (or yes
-             (and (not known)
-                  (every (lambda (value)
-                          (and (integerp value) (<= 0 value 255)))
-                        object))))))
+       (or (subtypep (array-element-type object) '(unsigned-byte 8))
+           (every (lambda (value)
+                   (and (integerp value) (<= 0 value 255)))
+                 object))))
 
 (defun %copy-octets (octets &optional (start 0) end)
   (let* ((end (or end (length octets)))
@@ -37,7 +32,7 @@
 
 (defun %octets-for-argument (argument)
   (cond
-    ((%octet-vector-p argument)
+    ((%encodable-octet-vector-p argument)
      (%copy-octets argument))
     ((stringp argument)
      (%utf8-octets argument))

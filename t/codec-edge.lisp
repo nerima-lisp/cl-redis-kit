@@ -11,6 +11,11 @@
     (expect (equalp (redis-kit:encode-command 'ping)
                     (redis-kit:encode-command "PING"))
             :to-be t)
+    (expect (redis-kit:encode-command "SET" (vector 1 2 3))
+            :to-equalp
+            (redis-kit:encode-command "SET" (test-octets 1 2 3)))
+    (signals redis-kit:redis-client-error
+      (redis-kit:encode-command "SET" (vector 1 256)))
     (signals redis-kit:redis-client-error
       (redis-kit::%ascii-octets (format nil "caf~C" #\é)))
     (signals redis-kit:redis-client-error

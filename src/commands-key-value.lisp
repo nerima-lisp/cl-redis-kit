@@ -1,12 +1,3 @@
-(in-package #:redis-kit)
-
-(define-redis-command get "GET"
-    (key &key (decode :utf-8) timeout (retry-safe-p t))
-  :arguments (list key)
-  :decode decode
-  :timeout timeout
-  :retry-safe-p retry-safe-p)
-
 (defun set (connection key value &key nx xx get ex px exat pxat keepttl timeout
                                       retry-safe-p)
   (when (and nx xx)
@@ -27,21 +18,16 @@
     (when keepttl (push "KEEPTTL" tail-options))
     (%command-value connection "SET"
                     (append arguments (nreverse tail-options))
+                    :decode :utf-8
                     :timeout timeout
                     :retry-safe-p retry-safe-p)))
-
-(define-redis-command del "DEL" (&rest keys)
-  :arguments (%require-values keys "DEL"))
-
-(define-redis-command exists "EXISTS" (&rest keys)
-  :arguments (%require-values keys "EXISTS")
-  :retry-safe-p t)
 
 (defun incr (connection key &rest arguments)
   (multiple-value-bind (values options)
       (%single-command-argument arguments "INCR")
     (%command-value connection (if values "INCRBY" "INCR")
                     (if values (list key (first values)) (list key))
+                    :decode :utf-8
                     :timeout (getf options :timeout)
                     :retry-safe-p (getf options :retry-safe-p))))
 
@@ -50,6 +36,7 @@
       (%single-command-argument arguments "DECR")
     (%command-value connection (if values "DECRBY" "DECR")
                     (if values (list key (first values)) (list key))
+                    :decode :utf-8
                     :timeout (getf options :timeout)
                     :retry-safe-p (getf options :retry-safe-p))))
 
@@ -65,6 +52,7 @@
         (push (string-upcase (symbol-name option)) tail-options)))
     (%command-value connection command
                     (append arguments (nreverse tail-options))
+                    :decode :utf-8
                     :timeout timeout
                     :retry-safe-p retry-safe-p)))
 
@@ -77,13 +65,3 @@
   (%expiration-command connection "PEXPIRE" key milliseconds
                        (list :nx nx :xx xx :gt gt :lt lt) timeout
                        retry-safe-p))
-
-(define-redis-command ttl "TTL" (key &key timeout (retry-safe-p t))
-  :arguments (list key)
-  :timeout timeout
-  :retry-safe-p retry-safe-p)
-
-(define-redis-command pttl "PTTL" (key &key timeout (retry-safe-p t))
-  :arguments (list key)
-  :timeout timeout
-  :retry-safe-p retry-safe-p)

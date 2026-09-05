@@ -18,6 +18,12 @@ The core system remains independent of `cl+ssl` and
 `cl-resilience-kit`. Load `cl-redis-kit/tls` for TLS transport and
 `"cl-redis-kit/resilience"` for resilience-backed retry calls.
 
+## Deliberate removals
+
+The pre-2.x `pool-with-connection` alias is not exported. Use
+`call-with-pool-connection` or `with-pool`; keeping one borrowing primitive
+avoids two APIs with identical ownership semantics.
+
 ## Retry semantics
 
 Retries are not a blanket guarantee. A retry policy must be configured, and a

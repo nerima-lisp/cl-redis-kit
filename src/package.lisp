@@ -116,6 +116,5 @@
    #:pool-max-size
    #:pool-max-wait
    #:call-with-pool-connection
-   #:pool-with-connection
    #:pool-execute
    #:with-pool))

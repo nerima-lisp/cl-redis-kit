@@ -51,12 +51,12 @@
                  :max-size 1
                  :max-wait 0)))
       (unwind-protect
-           (redis-kit:pool-with-connection
+           (redis-kit:call-with-pool-connection
             pool
             (lambda (connection)
               (declare (ignore connection))
               (signals redis-kit:redis-timeout-error
-                (redis-kit:pool-with-connection
+                (redis-kit:call-with-pool-connection
                  pool
                  (lambda (nested-connection)
                    (declare (ignore nested-connection))

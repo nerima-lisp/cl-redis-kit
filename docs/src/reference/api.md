@@ -10,7 +10,10 @@
 | `cl-redis-kit/test` | Main test system |
 | `cl-redis-kit/resilience/test` | Resilience integration tests |
 
-The core system does not require the optional TLS or resilience systems.
+The core system does not require the optional TLS or resilience systems. It
+includes the opt-in `cl-weave` execution journal; wrap application operations in
+`cl-weave:with-execution-journal` to collect payload-free command, result, and
+error frames.
 
 ## Protocol
 
@@ -67,7 +70,7 @@ The exported generated commands cover:
 
 `make-pool`, `close-pool`, `pool-closed-p`, `pool-size`,
 `pool-idle-count`, `pool-max-size`, `pool-max-wait`,
-`call-with-pool-connection`, `pool-with-connection`,
+`call-with-pool-connection`,
 `pool-execute`, and `with-pool` make up the pool API.
 
 ## Metrics

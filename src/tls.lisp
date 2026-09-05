@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (defun %validate-tls-options (options)
   (when options
     (unless (and (listp options)
@@ -19,10 +17,6 @@
                       :message "TLS options contain an unknown key."
                       :cause key))))
   options)
-
-(defgeneric %upgrade-tls-stream (stream host options)
-  (:documentation
-   "Upgrade STREAM for HOST using OPTIONS when optional TLS support is loaded."))
 
 (defmethod %upgrade-tls-stream ((stream t) host options)
   (declare (ignore stream host options))

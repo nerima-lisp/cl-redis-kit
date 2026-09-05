@@ -44,10 +44,12 @@
       flake = false;
     };
 
-    # No release tag is published yet; pin the reviewed upstream commit so
-    # dependency resolution remains reproducible.
     cl-observability-kit = {
-      url = "github:nerima-lisp/cl-observability-kit/eeb054321c787535133594f1b1800aeae48cb2f6";
+      url = "github:nerima-lisp/cl-observability-kit/v0.1.0";
+      flake = false;
+    };
+    cl-resilience-kit = {
+      url = "github:nerima-lisp/cl-resilience-kit/v1.0.0";
       flake = false;
     };
 
@@ -67,6 +69,7 @@
       cl-host-kit,
       cl-weave,
       cl-observability-kit,
+      cl-resilience-kit,
     }:
     let
       lib = nixpkgs.lib;
@@ -81,6 +84,10 @@
       pname = "cl-redis-kit";
       asd = ./cl-redis-kit.asd;
       root = ./.;
+      docs = {
+        root = ./docs;
+        mkdocsYmlName = "mkdocs.yml";
+      };
 
       meta = {
         description = "A binary-safe Redis RESP2/RESP3 client for Common Lisp.";
@@ -88,7 +95,8 @@
         license = lib.licenses.mit;
       };
 
-      lispDependencies = ctx:
+      lispDependencies =
+        ctx:
         let
           host = ctx.cl.lispDerivation {
             lispSystem = "cl-host-kit";
@@ -115,13 +123,21 @@
             lispSystem = "cl-concurrent-kit";
             version = ctx.cl.fromAsdSystem (cl-concurrent-kit + "/cl-concurrent-kit.asd");
             src = cl-concurrent-kit;
-            lispDependencies = [ boundary date ];
+            lispDependencies = [
+              boundary
+              date
+            ];
           };
           observability = ctx.cl.lispDerivation {
             lispSystem = "cl-observability-kit";
             version = ctx.cl.fromAsdSystem (cl-observability-kit + "/cl-observability-kit.asd");
             src = cl-observability-kit;
             lispDependencies = [ concurrent ];
+          };
+          weave = ctx.cl.lispDerivation {
+            lispSystem = "cl-weave";
+            version = ctx.cl.fromAsdSystem (cl-weave + "/cl-weave.asd");
+            src = cl-weave;
           };
           splitSequence = ctx.cl.fromNixpkgsLisp {
             drv = ctx.pkgs.sbclPackages.split-sequence;
@@ -174,6 +190,7 @@
           date
           boundary
           concurrent
+          weave
           observability
           splitSequence
           usocket
@@ -201,13 +218,26 @@
 
       devShellPackages = ctx: [
         paredit-cli.packages.${ctx.system}.default
+        ctx.pkgs.python3Packages.mkdocs-material
       ];
 
-      extraOutputs = ctx:
+      extraOutputs =
+        ctx:
         let
           clPlusSsl = ctx.cl.fromNixpkgsLisp {
             drv = ctx.pkgs.sbclPackages.cl_plus_ssl;
             lispImplementation = "sbcl";
+          };
+          weave = ctx.cl.lispDerivation {
+            lispSystem = "cl-weave";
+            version = ctx.cl.fromAsdSystem (cl-weave + "/cl-weave.asd");
+            src = cl-weave;
+          };
+          resilience = ctx.cl.lispDerivation {
+            lispSystem = "cl-resilience-kit";
+            version = ctx.cl.fromAsdSystem (cl-resilience-kit + "/cl-resilience-kit.asd");
+            src = cl-resilience-kit;
+            lispDependencies = ctx.lispDerivationArgs.lispDependencies;
           };
           tlsPackage =
             (ctx.cl.lispMultiDerivation (
@@ -217,26 +247,59 @@
                 systems = {
                   tls = {
                     lispSystem = "cl-redis-kit/tls";
-                    lispDependencies =
-                      ctx.lispDerivationArgs.lispDependencies
-                      ++ [ ctx.package clPlusSsl ];
+                    lispDependencies = ctx.lispDerivationArgs.lispDependencies ++ [
+                      ctx.package
+                      clPlusSsl
+                    ];
                   };
                 };
               }
             )).tls;
-        in
-        {
-          packages.coverage = ctx.cl.mkCoverageReport {
+          resiliencePackage =
+            (ctx.cl.lispMultiDerivation (
+              ctx.lispDerivationArgs
+              // {
+                lispCheckDependencies = [ ];
+                systems = {
+                  resilience = {
+                    lispSystem = "cl-redis-kit/resilience";
+                    lispDependencies = ctx.lispDerivationArgs.lispDependencies ++ [
+                      ctx.package
+                      resilience
+                    ];
+                  };
+                };
+              }
+            )).resilience;
+          resilienceTest = ctx.cl.lispDerivation (
+            ctx.lispDerivationArgs
+            // {
+              lispSystem = "cl-redis-kit/resilience/test";
+              lispDependencies = ctx.lispDerivationArgs.lispDependencies ++ [
+                ctx.package
+                resiliencePackage
+                weave
+              ];
+            }
+          );
+          coverage = ctx.cl.mkCoverageReport {
             drv = ctx.package.enableCheck;
             systems = [ "cl-redis-kit" ];
+            entryPoint = "run-coverage.lisp";
             timeoutSeconds = testTimeout;
           };
+        in
+        {
+          packages.coverage = coverage;
           packages.tls = tlsPackage;
+          packages.resilience = resiliencePackage;
           checks.paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
             inherit (ctx) src;
             name = "cl-redis-kit-paredit-lint";
           };
+          checks.coverage = coverage;
           checks.tls = tlsPackage;
+          checks.resilience = resilienceTest.enableCheck;
         };
     };
 }

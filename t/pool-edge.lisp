@@ -3,6 +3,36 @@
 
 (describe
     "pool continuation boundaries"
+  (it "applies documented pool defaults"
+    (let ((pool (redis-kit:make-pool
+                 :network-boundary (make-test-boundary))))
+      (unwind-protect
+           (let ((arguments (redis-kit::%pool-connection-arguments pool)))
+             (expect (getf arguments :host) :to-equal "127.0.0.1")
+             (expect (getf arguments :port) :to-be 6379)
+             (expect (getf arguments :protocol) :to-be :resp3)
+             (expect (getf arguments :timeout) :to-be 5)
+             (expect (getf arguments :connect-timeout) :to-be 5)
+             (expect (getf arguments :read-timeout) :to-be 5)
+             (expect (getf arguments :handshake) :to-be t)
+             (expect (getf arguments :max-pushes) :to-be 1024)
+             (expect (redis-kit:pool-max-size pool) :to-be 8)
+             (expect (redis-kit:pool-max-wait pool) :to-be nil))
+        (redis-kit:close-pool pool))))
+
+  (it "preserves explicitly supplied pool connection options"
+    (let ((pool (redis-kit:make-pool
+                 :host "redis.example"
+                 :port 6380
+                 :max-pushes 7
+                 :network-boundary (make-test-boundary))))
+      (unwind-protect
+           (let ((arguments (redis-kit::%pool-connection-arguments pool)))
+             (expect (getf arguments :host) :to-equal "redis.example")
+             (expect (getf arguments :port) :to-be 6380)
+             (expect (getf arguments :max-pushes) :to-be 7))
+        (redis-kit:close-pool pool))))
+
   (it "returns borrowed connections after success and failure"
     (let ((pool (redis-kit:make-pool
                  :protocol :resp2
@@ -121,6 +151,27 @@
              (expect (redis-kit:pool-execute pool "PING") :to-equal "PONG")
              (expect (redis-kit:pool-size pool) :to-be 1)
              (expect (redis-kit:pool-idle-count pool) :to-be 1))
+        (redis-kit:close-pool pool))))
+
+  (it "rejects a connection that finishes after pool closure"
+    (let ((pool (redis-kit:make-pool
+                 :protocol :resp2
+                 :handshake nil
+                 :network-boundary (make-test-boundary)
+                 :max-size 1))
+          (opened nil))
+      (unwind-protect
+           (with-mocked-functions
+               (((symbol-function 'redis-kit:open-connection)
+                  (lambda (connection)
+                    (setf opened t)
+                    (redis-kit:close-pool pool)
+                    connection)))
+             (signals redis-kit:redis-connection-error
+               (redis-kit::%pool-acquire pool 0)))
+        (expect opened :to-be-truthy)
+        (expect (redis-kit:pool-size pool) :to-be 0)
+        (expect (redis-kit:pool-closed-p pool) :to-be-truthy)
         (redis-kit:close-pool pool))))
 
   (it "times out after a condition wait reports no wakeup"

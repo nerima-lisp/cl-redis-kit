@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (defun %timeout-duration (seconds)
   (when seconds
     (multiple-value-bind (whole fraction) (floor seconds)
@@ -31,8 +29,12 @@
   (setf (connection-state connection) :broken)
   connection)
 
+(defun %effective-operation-timeout (connection timeout)
+  (or (%validate-non-negative-number timeout "TIMEOUT")
+      (connection-timeout connection)))
+
 (defun %call-with-timeout (connection timeout thunk)
-  (let ((seconds (or timeout (connection-timeout connection))))
+  (let ((seconds (%effective-operation-timeout connection timeout)))
     (handler-case
         (if seconds
             (cl-concurrent-kit:with-timeout (%timeout-duration seconds)
@@ -115,16 +117,18 @@
     (error 'redis-connection-error
            :message "The Redis connection is not open."
            :cause (connection-state connection)))
-  (handler-case
-      (%call-with-timeout
-       connection timeout
-       (lambda ()
-         (%normalize-boundary-result
-          (cl-boundary-kit:network-boundary-request
-           (connection-network-boundary connection)
-           (list :bytes octets :replies count)
-           :timeout timeout)
-          count)))
+  (let ((effective-timeout
+          (%effective-operation-timeout connection timeout)))
+    (handler-case
+        (%call-with-timeout
+         connection effective-timeout
+         (lambda ()
+           (%normalize-boundary-result
+            (cl-boundary-kit:network-boundary-request
+             (connection-network-boundary connection)
+             (list :bytes octets :replies count)
+             :timeout effective-timeout)
+            count)))
     (redis-timeout-error (condition)
       (error condition))
     (redis-connection-error (condition)
@@ -136,7 +140,7 @@
       (%invalidate-connection connection)
       (error 'redis-connection-error
              :message "Redis network boundary request failed."
-             :cause cause))))
+             :cause cause)))))
 
 (defun %socket-boundary-request (connection request timeout)
   (declare (ignore timeout))

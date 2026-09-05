@@ -10,12 +10,15 @@ nix run .#test
 nix flake check
 nix build .#coverage
 nix build .#tls
+nix build .#resilience
+nix build .#docs
 nix fmt
 ~~~
 
-`nix flake check` evaluates the formatter, test, lint, and TLS checks exposed
-by the flake. `nix run .#test` runs the test application. The coverage and
-TLS package builds are separate outputs.
+`nix flake check` evaluates the formatter, test, lint, TLS, resilience, and
+documentation checks exposed by the flake. `nix run .#test` runs the core test
+application. The coverage, optional integration packages, and documentation
+site are separate outputs.
 
 ## Direct test execution
 
@@ -32,8 +35,8 @@ test set non-empty when changing the runner or plan.
 
 ## Documentation build
 
-Install MkDocs with the Material theme, then run the strict build from the
-repository root:
+The development shell includes MkDocs with the Material theme. Run the strict
+build from the repository root:
 
 ~~~sh
 mkdocs build --strict -f docs/mkdocs.yml --site-dir /tmp/cl-redis-kit-docs

@@ -1,31 +1,3 @@
-(in-package #:redis-kit)
-
-(defclass redis-pool ()
-  ((connection-arguments
-    :initarg :connection-arguments
-    :reader %pool-connection-arguments)
-   (max-size
-    :initarg :max-size
-    :reader pool-max-size)
-   (max-wait
-    :initarg :max-wait
-    :reader pool-max-wait)
-   (idle
-    :initform nil
-    :accessor %pool-idle)
-   (size
-    :initform 0
-    :accessor %pool-size)
-   (lock
-    :initarg :lock
-    :reader %pool-lock)
-   (condition
-    :initarg :condition
-    :reader %pool-condition)
-   (closed-p
-    :initform nil
-    :accessor %pool-closed-p)))
-
 (defun redis-pool-p (object)
   (typep object 'redis-pool))
 
@@ -44,32 +16,36 @@
            :cause value))
   value)
 
-(defun make-pool (&key
-                        (host "127.0.0.1")
-                        (port 6379)
-                        (protocol :resp3)
-                        (timeout 5)
-                        (connect-timeout timeout)
-                        (read-timeout timeout)
-                        username
-                        password
-                        database
-                        (handshake t)
-                        network-boundary
-                        tls
-                        retry-policy
-                        metric-registry
-                        push-handler
-                        (max-pushes 1024)
-                        (max-size 8)
-                        max-wait)
+(defun make-pool (&rest arguments
+                  &key host port protocol timeout connect-timeout read-timeout
+                    username password database handshake network-boundary tls
+                    retry-policy metric-registry push-handler max-pushes
+                    max-size max-wait)
   "Create a bounded pool of lazily opened Redis connections.
 
 MAX-SIZE counts both idle and borrowed connections.  MAX-WAIT is NIL for an
 unbounded wait, or a non-negative number of seconds for callers waiting for a
 slot.  A connection is opened outside the pool lock after its slot is
-reserved, so a slow connect does not block borrowers that already have idle
-connections."
+  reserved, so a slow connect does not block borrowers that already have idle
+  connections."
+  (unless (%keyword-supplied-p arguments :host)
+    (setf host "127.0.0.1"))
+  (unless (%keyword-supplied-p arguments :port)
+    (setf port 6379))
+  (unless (%keyword-supplied-p arguments :protocol)
+    (setf protocol :resp3))
+  (unless (%keyword-supplied-p arguments :timeout)
+    (setf timeout 5))
+  (unless (%keyword-supplied-p arguments :connect-timeout)
+    (setf connect-timeout timeout))
+  (unless (%keyword-supplied-p arguments :read-timeout)
+    (setf read-timeout timeout))
+  (unless (%keyword-supplied-p arguments :handshake)
+    (setf handshake t))
+  (unless (%keyword-supplied-p arguments :max-pushes)
+    (setf max-pushes 1024))
+  (unless (%keyword-supplied-p arguments :max-size)
+    (setf max-size 8))
   (unless (and (integerp max-size) (plusp max-size))
     (error 'redis-client-error
            :message "MAX-SIZE must be a positive integer."
@@ -134,6 +110,15 @@ connections."
   (error 'redis-timeout-error
          :message "Timed out waiting for an available Redis connection."
          :cause wait))
+
+(defun %pool-reservation-accepted-p (pool)
+  (cl-concurrent-kit:with-lock-held ((%pool-lock pool))
+    (if (%pool-closed-p pool)
+        (progn
+          (decf (%pool-size pool))
+          (cl-concurrent-kit:condition-notify (%pool-condition pool))
+          nil)
+        t)))
 
 (defun %pool-reservation-failed (pool cause)
   (cl-concurrent-kit:with-lock-held ((%pool-lock pool))

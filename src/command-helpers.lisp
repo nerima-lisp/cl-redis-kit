@@ -1,6 +1,4 @@
-(in-package #:redis-kit)
-
-(defun %command-value (connection command arguments &key (decode :utf-8)
+(defun %command-value (connection command arguments &key decode
                                                    timeout retry-safe-p)
   (reply-value (%execute-command connection command arguments
                                  :timeout timeout

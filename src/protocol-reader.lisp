@@ -1,6 +1,4 @@
 ; paredit:ignore-file length-emptiness-test -- RESP integer and double fields are strings; LENGTH is required for their empty-field checks.
-(in-package #:redis-kit)
-
 (defun %parser-fail (parser message &optional cause)
   (error 'redis-protocol-error
          :message message
@@ -62,7 +60,9 @@
              (setf (aref result index) (code-char byte)))
     result))
 
-(defun %parse-integer-line (parser octets &key (allow-negative t))
+(defun %parse-integer-line (parser octets &rest arguments &key allow-negative)
+  (unless (%keyword-supplied-p arguments :allow-negative)
+    (setf allow-negative t))
   (let ((string (%ascii-string parser octets)))
     (when (zerop (length string))
       (%parser-fail parser "RESP integer is empty."))

@@ -1,6 +1,4 @@
 ; paredit:ignore-file macro-multiple-evaluation -- Macro arguments are validated at expansion time; quoted metadata is data and each generated runtime option is consumed once.
-(in-package #:redis-kit)
-
 (defmacro define-redis-command
     (name command lambda-list &key (arguments nil arguments-supplied-p)
                               (decode :utf-8) timeout retry-safe-p)

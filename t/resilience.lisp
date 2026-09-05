@@ -3,7 +3,6 @@
   (:import-from #:cl-weave
                 #:it
                 #:expect
-                #:with-mocked-functions
                 #:run-all)
   (:export #:run-tests))
 
@@ -22,34 +21,43 @@
     (declare (ignore next))
     reply))
 
-(defun make-test-boundary ()
-  (cl-boundary-kit:make-network-boundary
-   :request-fn (lambda (request &key timeout)
-                 (declare (ignore request timeout))
-                 (simple-reply "PONG"))))
-
-(it "delegates retry-safe commands to cl-resilience-kit"
-  (let ((calls nil)
-        (connection
-          (redis-kit:make-connection
-           :network-boundary (make-test-boundary)
-           :handshake nil
-           :retry-policy :test-policy)))
+(it "retries retry-safe commands through cl-resilience-kit"
+  (let* ((attempts 0)
+         (policy (cl-resilience-kit:make-retry-policy
+                  :max-attempts 2
+                  :retry-safe-p t
+                  :condition-classifier
+                  (lambda (condition attempt)
+                    (declare (ignore condition attempt))
+                    t)))
+         (connection
+           (redis-kit:make-connection
+            :network-boundary
+            (cl-boundary-kit:make-network-boundary
+             :request-fn (lambda (request &key timeout)
+                           (declare (ignore request timeout))
+                           (incf attempts)
+                           (if (= attempts 1)
+                               (error "transient test failure")
+                               (simple-reply "PONG"))))
+            :handshake nil
+            :retry-policy policy)))
     (unwind-protect
-         (with-mocked-functions
-             (((symbol-function 'cl-resilience-kit:call-with-resilience)
-                (lambda (thunk &key retry-policy operation &allow-other-keys)
-                  (push (list retry-policy operation) calls)
-                  (funcall thunk))))
+         (progn
            (expect (redis-kit:ping connection :retry-safe-p t)
                    :to-equal
                    "PONG")
-           (expect calls
-                   :to-equal
-                   '((:test-policy "PING"))))
+           (expect attempts :to-be 2))
       (redis-kit:close-connection connection))))
 
+(defun selected-test-count ()
+  (length
+   (cl-weave:collect-test-plan
+    :packages (list (find-package '#:redis-kit/resilience-test)))))
+
 (defun run-tests ()
+  (unless (plusp (selected-test-count))
+    (error "cl-redis-kit resilience test plan is empty"))
   (unless (cl-weave:run-all
             :reporter :spec
             :timeout-ms 20000

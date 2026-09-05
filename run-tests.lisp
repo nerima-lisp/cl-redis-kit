@@ -29,24 +29,27 @@
     (when (and value (plusp (length value)))
       value)))
 
-(defun environment-percentage (name)
-  (let ((value (environment-value name)))
-    (when value
-      (let ((percentage (parse-integer value :junk-allowed nil)))
-        (unless (<= 0 percentage 100)
-          (error "~A must be an integer from 0 through 100, got ~S."
-                 name value))
-        percentage))))
+(defun coverage-source-pathnames (source-directory)
+  (let ((helper 'cl-redis-kit-core-source-pathnames))
+    (unless (fboundp helper)
+      (error "coverage-paths.lisp did not define ~S." helper))
+    (funcall (symbol-function helper) source-directory)))
+
+(let ((root (script-directory)))
+  (when (environment-true-p "REDIS_KIT_COVERAGE")
+    (load (merge-pathnames #P"coverage-paths.lisp" root))))
 
 (let* ((root (script-directory))
        (coverage (not (null (environment-true-p "REDIS_KIT_COVERAGE"))))
+       (source-directory (merge-pathnames #P"src/" root))
        (report-directory
          (let ((value (environment-value "REDIS_KIT_COVERAGE_REPORT")))
            (when value
              (uiop:ensure-directory-pathname (pathname value)))))
        (coverage-include-pathnames
          (and coverage
-              (list (merge-pathnames #P"src/" root)))))
+              (coverage-source-pathnames source-directory)))
+       (coverage-exclude-pathnames nil))
   (register-local-systems root)
   (when coverage
     #+sbcl
@@ -58,7 +61,7 @@
         (proclaim (list 'optimize (list policy 3)))))
     #-sbcl
     (error "REDIS_KIT_COVERAGE requires SBCL sb-cover."))
-  (asdf:load-asd (merge-pathnames #P"cl-redis-kit.asd" root))
+  (load (merge-pathnames #P"cl-redis-kit.asd" root))
   (if coverage
       (progn
         (asdf:operate (quote asdf:load-op) "cl-redis-kit" :force t)
@@ -73,13 +76,8 @@
            :coverage-output (environment-value "REDIS_KIT_COVERAGE_OUTPUT")
            :coverage-report-directory report-directory
            :coverage-include-pathnames coverage-include-pathnames
-           :coverage-minimum-expression
-           (and coverage
-                (environment-percentage
-                 "REDIS_KIT_COVERAGE_MINIMUM_EXPRESSION"))
-           :coverage-minimum-branch
-           (and coverage
-                (environment-percentage
-                 "REDIS_KIT_COVERAGE_MINIMUM_BRANCH")))
+           :coverage-exclude-pathnames coverage-exclude-pathnames
+           :coverage-minimum-expression (and coverage 100)
+           :coverage-minimum-branch (and coverage 100))
     (uiop:quit 1))
   (uiop:quit 0))

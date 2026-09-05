@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (define-redis-command auth "AUTH" (password &key username timeout)
   :arguments (if username (list username password) (list password))
   :timeout timeout)
@@ -13,6 +11,7 @@
       (%single-command-argument arguments "HELLO")
     (%command-value connection "HELLO"
                     (list (if values (first values) 3))
+                    :decode :utf-8
                     :timeout (getf options :timeout)
                     :retry-safe-p (getf options :retry-safe-p))))
 
@@ -21,10 +20,11 @@
       (%single-command-argument arguments "PING")
     (%command-value connection "PING"
                     (when values (list (first values)))
+                    :decode :utf-8
                     :timeout (getf options :timeout)
                     :retry-safe-p (getf options :retry-safe-p))))
 
 (defun quit (connection &key timeout)
   (unwind-protect
-       (%command-value connection "QUIT" nil :timeout timeout)
+       (%command-value connection "QUIT" nil :decode :utf-8 :timeout timeout)
     (close-connection connection)))

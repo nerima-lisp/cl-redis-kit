@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (defun %parse-count (parser line kind)
   (let ((count (%parse-integer-line parser line :allow-negative nil)))
     (when (> count (%resp-parser-max-array-length parser))

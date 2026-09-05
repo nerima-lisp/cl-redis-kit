@@ -3,6 +3,32 @@
 
 (describe
     "connection lifecycle edges"
+  (it "applies documented connection defaults"
+    (let ((connection
+            (redis-kit:make-connection
+             :network-boundary (make-test-boundary))))
+      (unwind-protect
+           (progn
+             (expect (redis-kit:connection-host connection)
+                     :to-equal
+                     "127.0.0.1")
+             (expect (redis-kit:connection-port connection) :to-be 6379)
+             (expect (redis-kit:connection-protocol connection) :to-be :resp3)
+             (expect (redis-kit:connection-timeout connection) :to-be 5)
+             (expect (redis-kit::%connection-connect-timeout connection)
+                     :to-be
+                     5)
+             (expect (redis-kit::%connection-read-timeout connection)
+                     :to-be
+                     5)
+             (expect (redis-kit::%connection-handshake-p connection)
+                     :to-be
+                     t)
+             (expect (redis-kit::%connection-max-pushes connection)
+                     :to-be
+                     1024))
+        (redis-kit:close-connection connection))))
+
   (it "completes a RESP3 handshake with password-only authentication"
     (let* ((boundary
              (cl-boundary-kit:make-recording-network-boundary
@@ -150,6 +176,11 @@
          :password pass))))
 
   (it "rejects malformed and unknown TLS options"
+    (expect (redis-kit::%validate-tls-options nil)
+            :to-be
+            nil)
+    (signals redis-kit:redis-client-error
+      (redis-kit::%validate-tls-options :not-a-property-list))
     (let ((options '(:verify t)))
       (expect (redis-kit::%validate-tls-options options)
               :to-equal

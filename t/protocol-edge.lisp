@@ -39,6 +39,25 @@
        :max-frame-size 1))))
 
 (describe
+    "RESP scalar edge cases"
+  (it "rejects malformed doubles"
+    (signals redis-kit:redis-protocol-error
+      (decode-test-reply (test-octets 44 13 10)))
+    (signals redis-kit:redis-protocol-error
+      (decode-test-reply (test-octets 44 43 13 10)))
+    (signals redis-kit:redis-protocol-error
+      (decode-test-reply (test-octets 44 49 101 13 10))))
+
+  (it "decodes a finite double"
+    (expect (redis-kit:reply-value
+             (decode-test-reply
+              (test-octets 44 49 46 50 53 13 10)))
+            :to-satisfy
+            (lambda (value)
+              (and (numberp value)
+                   (< (abs (- value 1.25)) 1d-9))))))
+
+(describe
     "RESP reader primitives"
   (it "rejects truncated, non-ASCII, and malformed metadata"
     (flet ((parser (source &optional (max-bulk-length 32) (max-depth 256))
@@ -115,4 +134,19 @@
       (expect (redis-kit::%stream-byte-reader
                (make-string-input-stream ""))
               :to-be
-              :eof))))
+              :eof)))
+
+  (it "passes explicit read limits through the public reader"
+    (let ((stream
+            (make-string-input-stream
+             (format nil "+OK~C~C" #\Return #\Linefeed))))
+      (expect (redis-kit:reply-value
+               (redis-kit:read-reply
+                stream
+                :max-line-length 32
+                :max-bulk-length 32
+                :max-array-length 32
+                :max-depth 8
+                :max-frame-size 32))
+              :to-equal
+              "OK"))))

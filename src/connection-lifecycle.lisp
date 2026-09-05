@@ -1,27 +1,31 @@
-(in-package #:redis-kit)
-
 (defun %perform-handshake (connection)
   (when (%connection-handshake-p connection)
     (when (eq (connection-protocol connection) :resp3)
       (handler-case
-          (%check-server-reply (%raw-command connection "HELLO" '(3)
-                                              :timeout (connection-timeout connection)))
+          (%with-command-journal ("HELLO" 1)
+            (%check-server-reply
+             (%raw-command connection "HELLO" '(3)
+                           :timeout (connection-timeout connection))))
         (redis-server-error (condition)
           (if (%unsupported-hello-error-p condition)
               (setf (connection-protocol connection) :resp2)
               (error condition)))))
     (when (%connection-password connection)
-      (%check-server-reply
-       (%raw-command connection "AUTH"
-                     (if (%connection-username connection)
-                         (list (%connection-username connection)
-                               (%connection-password connection))
-                         (list (%connection-password connection)))
-                     :timeout (connection-timeout connection))))
+      (let ((arguments
+              (if (%connection-username connection)
+                  (list (%connection-username connection)
+                        (%connection-password connection))
+                  (list (%connection-password connection)))))
+        (%with-command-journal ("AUTH" (length arguments))
+          (%check-server-reply
+           (%raw-command connection "AUTH" arguments
+                         :timeout (connection-timeout connection))))))
     (when (%connection-database connection)
-      (%check-server-reply
-       (%raw-command connection "SELECT" (list (%connection-database connection))
-                     :timeout (connection-timeout connection)))))
+      (%with-command-journal ("SELECT" 1)
+        (%check-server-reply
+         (%raw-command connection "SELECT"
+                       (list (%connection-database connection))
+                       :timeout (connection-timeout connection))))))
   connection)
 
 (defun %open-connection-under-lock (connection)

@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (define-condition redis-error (error)
   ((message
     :initarg :message
@@ -9,11 +7,7 @@
     :initarg :cause
     :reader redis-error-cause
     :initform nil))
-  (:report
-   (lambda (condition stream)
-     (write-string (redis-error-message condition) stream)
-     (when (redis-error-cause condition)
-       (format stream " (~A)" (redis-error-cause condition))))))
+  (:report %report-redis-error))
 
 (define-condition redis-client-error (redis-error) ())
 

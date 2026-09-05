@@ -1,5 +1,3 @@
-(in-package #:redis-kit)
-
 (defun %pool-acquire (pool wait)
   (%validate-pool pool)
   (%validate-pool-wait wait)
@@ -36,14 +34,23 @@
           (connection
            (return connection))
           (reserve-p
-           (handler-case
-               (let ((new-connection
-                       (apply #'make-connection
-                              (%pool-connection-arguments pool))))
-                 (open-connection new-connection)
-                 (return new-connection))
-             (error (cause)
-               (%pool-reservation-failed pool cause)))))))))
+           (let ((new-connection
+                   (handler-case
+                       (let ((connection
+                               (apply #'make-connection
+                                      (%pool-connection-arguments pool))))
+                         (open-connection connection)
+                         connection)
+                     (error (cause)
+                       (%pool-reservation-failed pool cause)))))
+             (if (%pool-reservation-accepted-p pool)
+                 (return new-connection)
+                 (progn
+                   (close-connection new-connection)
+                   (error 'redis-connection-error
+                          :message
+                          "The Redis pool was closed while a connection was opening."
+                          :cause pool))))))))))
 
 (defun %pool-release (pool connection)
   (let ((close-p nil))
@@ -61,7 +68,7 @@
       (close-connection connection)))
   connection)
 
-(defun call-with-pool-connection (pool thunk &key (timeout nil timeoutp))
+(defun call-with-pool-connection (pool thunk &rest arguments &key timeout)
   "Borrow a connection, call THUNK with it, and always return it.
 
 When TIMEOUT is omitted, POOL-MAX-WAIT controls waiting.  Supplying
@@ -71,17 +78,14 @@ When TIMEOUT is omitted, POOL-MAX-WAIT controls waiting.  Supplying
     (error 'redis-client-error
            :message "THUNK must be a function."
            :cause thunk))
-  (let ((connection (%pool-acquire pool
-                                   (if timeoutp timeout (pool-max-wait pool)))))
+  (let ((connection (%pool-acquire
+                    pool
+                    (if (%keyword-supplied-p arguments :timeout)
+                        timeout
+                        (pool-max-wait pool)))))
     (unwind-protect
         (funcall thunk connection)
       (%pool-release pool connection))))
-
-(defun pool-with-connection (pool thunk &key (timeout nil timeoutp))
-  "Call THUNK with a borrowed connection and always return the connection."
-  (if timeoutp
-      (call-with-pool-connection pool thunk :timeout timeout)
-      (call-with-pool-connection pool thunk)))
 
 (defun close-pool (pool)
   "Close POOL and all idle connections.
@@ -106,16 +110,7 @@ function more than once is harmless."
 
 COMMAND arguments, including `:decode` and `:timeout`, are passed to EXECUTE;
 the pool's MAX-WAIT controls only acquisition."
-  (pool-with-connection
+  (call-with-pool-connection
    pool
    (lambda (connection)
      (apply #'execute connection command arguments))))
-
-(defmacro with-pool ((variable pool &key (timeout nil timeoutp)) &body body)
-  "Borrow VARIABLE from POOL for BODY and return it afterward."
-  (if timeoutp
-      `(pool-with-connection ,pool
-                             (lambda (,variable) ,@body)
-                             :timeout ,timeout)
-      `(pool-with-connection ,pool
-                             (lambda (,variable) ,@body))))

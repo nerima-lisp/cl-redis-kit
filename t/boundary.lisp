@@ -76,6 +76,26 @@
                      :to-be 4))
         (redis-kit:close-connection connection)))))
 
+  (it "passes the inherited operation timeout to the network boundary"
+    (let ((observed-timeout nil)
+          (connection
+            (redis-kit:make-connection
+             :timeout 7
+             :protocol :resp2
+             :handshake nil
+             :network-boundary
+             (cl-boundary-kit:make-network-boundary
+              :request-fn
+              (lambda (request &key timeout)
+                (declare (ignore request))
+                (setf observed-timeout timeout)
+                (test-simple-reply "PONG"))))))
+      (unwind-protect
+           (progn
+             (expect (redis-kit:ping connection) :to-equal "PONG")
+             (expect observed-timeout :to-be 7))
+        (redis-kit:close-connection connection))))
+
 (describe
     "command argument encoding"
   (it "preserves SET expiration options and timeout separation"
@@ -229,6 +249,20 @@
       (unwind-protect
            (signals redis-kit:redis-client-error
              (redis-kit:ping connection :retry-safe-p t))
+        (redis-kit:close-connection connection))))
+
+  (it "rejects invalid command timeouts before opening"
+    (let ((connection
+            (redis-kit:make-connection
+             :protocol :resp2
+             :handshake nil
+             :network-boundary (make-test-boundary))))
+      (unwind-protect
+           (progn
+             (signals redis-kit:redis-client-error
+               (redis-kit:ping connection :timeout -1))
+             (signals redis-kit:redis-client-error
+               (redis-kit:ping connection :timeout :not-a-number)))
         (redis-kit:close-connection connection))))
 
   (it "rejects malformed pipeline commands before network I/O"
