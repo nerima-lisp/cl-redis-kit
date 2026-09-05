@@ -77,7 +77,7 @@
         (redis-kit:close-connection connection)))))
 
   (it "passes the inherited operation timeout to the network boundary"
-    (let ((observed-timeout nil)
+    (let* ((observed-timeout nil)
           (connection
             (redis-kit:make-connection
              :timeout 7

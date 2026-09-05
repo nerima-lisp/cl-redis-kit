@@ -14,7 +14,7 @@ partially written pipeline may have already changed server state."
            :message "PIPELINE-REPLIES requires a non-empty command list."
            :cause commands))
   (dolist (command commands)
-    (unless (and (listp command) (consp command))
+    (unless (and (consp command) (listp (cdr command)))
       (error 'redis-client-error
              :message "Each pipeline command must be a non-empty list."
              :cause command)))
