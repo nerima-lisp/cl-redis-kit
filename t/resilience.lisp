@@ -51,9 +51,7 @@
       (redis-kit:close-connection connection))))
 
 (defun selected-test-count ()
-  (length
-   (cl-weave:collect-test-plan
-    :packages (list (find-package '#:redis-kit/resilience-test)))))
+  (length (cl-weave:collect-test-plan (cl-weave:root-suite))))
 
 (defun run-tests ()
   (unless (plusp (selected-test-count))
