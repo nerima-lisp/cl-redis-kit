@@ -29,10 +29,8 @@ command arguments
 | --- | --- |
 | Protocol model/API | RESP values, limits, encoding, decoding, and frame errors |
 | Connection model/lifecycle | Configuration, handshake, authentication, database selection, and close semantics |
-| Connection transport | Network I/O, deadlines, socket failures, and reply boundaries |
-| Execution journal | Opt-in `cl-weave` command, result, and error frames without payloads |
-| Execution policy/pipeline/scope | Retry dispatch, pipelines, resource ownership, and push replies |
-| Command specs/helpers | Declarative command metadata and generated convenience functions |
+| Connection transport/execution | Network I/O, deadlines, retries, pipelines, and push replies |
+| Command specs/helpers | Declarative command metadata and command helper functions |
 | Pool | Lazy bounded borrowing and return of connections |
 | Metrics | Aggregate command counters, errors, and duration |
 | Optional integrations | TLS and resilience specializations kept outside the core system |

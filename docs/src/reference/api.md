@@ -54,7 +54,7 @@ Use `execute-reply` for typed replies and `execute` for converted values.
 The command-spec API provides `define-redis-command`,
 `redis-command-spec`, and specification accessors.
 
-The exported generated commands cover:
+The exported command helpers cover:
 
 - Connection: `auth`, `select`, `hello`, `ping`, `quit`
 - Strings and counters: `get`, `set`, `del`, `exists`,

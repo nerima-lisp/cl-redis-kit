@@ -11,8 +11,8 @@ optional attributes. The protocol helpers expose the object directly:
 - `reply-error-p` and `null-reply-p` classify common replies.
 
 `execute` applies `reply-value` and is convenient for ordinary command
-results. The lower-level `decode-reply` and `read-reply` APIs retain
-protocol framing and return the first unconsumed position where applicable.
+results. The lower-level `decode-reply` API returns the decoded reply and
+the first unconsumed position; `read-reply` returns only the decoded reply.
 
 ## Connection lifecycle
 
@@ -33,7 +33,7 @@ default for that operation.
 
 Retrying is policy-driven and must account for whether a command may have been
 partially written. The low-level execution APIs expose `:retry-safe-p`;
-generated command helpers declare the safety of the operations they issue.
+command helpers can carry command-specific safety metadata.
 Treat writes as non-retryable unless their application-level semantics make a
 retry safe.
 

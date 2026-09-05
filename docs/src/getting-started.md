@@ -49,7 +49,9 @@ TLS is isolated from the core system:
 ~~~lisp
 (asdf:load-system "cl-redis-kit/tls")
 
-(redis-kit:with-connection (connection :host "127.0.0.1" :tls t)
+(redis-kit:with-connection (connection
+                             :host "127.0.0.1"
+                             :tls '(:verify :required))
   (redis-kit:execute connection "PING"))
 ~~~
 

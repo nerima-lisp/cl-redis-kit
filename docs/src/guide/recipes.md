@@ -49,7 +49,10 @@ Load the optional TLS system before creating a TLS connection:
 
 ~~~lisp
 (asdf:load-system "cl-redis-kit/tls")
-(redis-kit:with-connection (connection :host "127.0.0.1" :port 6379 :tls t)
+(redis-kit:with-connection (connection
+                             :host "127.0.0.1"
+                             :port 6379
+                             :tls '(:verify :required))
   (redis-kit:execute connection "PING"))
 ~~~
 

@@ -28,7 +28,7 @@ avoids two APIs with identical ownership semantics.
 
 Retries are not a blanket guarantee. A retry policy must be configured, and a
 request must be safe to repeat. Low-level execution accepts `:retry-safe-p`;
-generated helpers can provide command-specific safety metadata. Applications
+command helpers can provide command-specific safety metadata. Applications
 should treat writes as non-retryable unless their own semantics make repetition
 safe.
 
